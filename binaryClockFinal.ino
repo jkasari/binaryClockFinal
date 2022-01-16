@@ -49,8 +49,8 @@ class BitDot {
     // This takes an x and y reading off of the giro along with all the other x y locations of the other dots.
     void moveDot(int16_t xRead, int16_t yRead) {
       updatePulls(xRead, yRead); // Update the dots pull values
-      int8_t tempx = shiftDot(pullx, x, true); // Creates a theoretical dot in the direction it wants to move. This accounts for the board but not other dots.
-      int8_t tempy = shiftDot(pully, y, false);
+      int8_t tempx = shiftDot(pullx, x); // Creates a theoretical dot in the direction it wants to move. This accounts for the board but not other dots.
+      int8_t tempy = shiftDot(pully, y); 
       if (!realtor[tempx][tempy]) { // This where the dot wants to move against the locations of all the other dots.
         realtor[x][y] = false;  // this dot is no longer at that location
         x = tempx; // If that location was okay move the dot there.
@@ -120,13 +120,13 @@ class BitDot {
       return temp;
     }
 
-    int8_t shiftDot(int16_t &tempPull, int8_t temp, bool isX) { // Measure a pull value and see if it is enough to move a dot in that direction
-      if (tempPull < -512) {
+    int8_t shiftDot(int16_t &tempPull, int8_t temp) { // Measure a pull value and see if it is enough to move a dot in that direction
+      if (tempPull < -pullLimit) {
         tempPull = 0;
-        return isX ? boundCheck(temp, 1) : boundCheck(temp, -1);
-      } else if (515 < tempPull) {
+        return boundCheck(temp, -1);
+      } else if (pullLimit < tempPull) {
         tempPull = 0;
-        return isX ? boundCheck(temp, -1) : boundCheck(temp, 1);
+        return boundCheck(temp, 1);
       }
       return temp;
     }
@@ -190,6 +190,7 @@ class BitDot {
     int8_t x;
     int8_t y;
     int32_t fadeColor;
+    const int16_t pullLimit = 400; // This is essentially how long a dot waits untill it moves in a given direction.
     bool zero = true;
     bool fading = false;
   
@@ -215,14 +216,15 @@ class GY521Reader {
       XReading = Wire.read()<<8 | Wire.read(); // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
       YReading = Wire.read()<<8 | Wire.read(); // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
       ZReading = Wire.read()<<8 | Wire.read(); // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
+      Serial.println(XReading);
     }
 
-    int16_t x() { return XReading / adjuster; }
-    int16_t y() { return YReading / adjuster; }
-    int16_t z() { return ZReading / adjuster; }
+    int16_t X() { return XReading / adjuster; }
+    int16_t Y() { return YReading / adjuster; }
+    int16_t Z() { return ZReading / adjuster; }
 
   private:
-    const int8_t port = 69;
+    const int8_t port = 0x69;
     const int16_t adjuster = 60; 
     int16_t XReading = 0;
     int16_t YReading = 0;
@@ -278,7 +280,7 @@ void loop() {
       setDotTime16Bit(now);
       break;
   }
-  if (goGravityMode(AccelReader.x())) { // if the thing is getting tipped, lets party!!
+  if (goGravityMode(AccelReader.X())) { // if the thing is getting tipped, lets party!!
     gravityMode = true;
     timer = 1;
   } else {
@@ -286,7 +288,7 @@ void loop() {
   }
   for (int i = 0; i < DOT_NUM; ++i) {
     if (gravityMode) {
-      BitDots[i].moveDot(AccelReader.y(), AccelReader.x()); // move the dot!!
+      BitDots[i].moveDot(AccelReader.X(), AccelReader.Y()); // move the dot!!
     }
     BitDots[i].displayDot();
   }
