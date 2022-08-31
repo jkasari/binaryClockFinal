@@ -6,16 +6,16 @@
 #define LED_NUM 64 // Number of leds in the matrix
 #define BD_NUM 24 // Number of total bit dots needed for all displays.
 #define PR A0 // Photoresitor data in
-#define BUTT_1 3 // Button 1 old clock is pin 9 / new clock is pin 3
-#define BUTT_2 4 // Button 2 old clock is pin 7 / new clock is pin 4
-#define BUTT_3 5 // Button 3 old clock is pin 8 / new clock is pin 5
+#define BUTT_1 9 // Button 1 old clock is pin 9 / new clock is pin 3
+#define BUTT_2 7 // Button 2 old clock is pin 7 / new clock is pin 4
+#define BUTT_3 8 // Button 3 old clock is pin 8 / new clock is pin 5
 #define MODE_LIM 2 // Limit of display modes.
 #define BACKG_NUM 255 // Number of backgrounds  
 #define ACCEL_PORT 0x69 // Wire address of the accelerometer
-#define TIP_POINT 200 // At what point the dots ball out of place.
+#define TIP_POINT 250 // At what point the dots ball out of place.
 #define FADE_RATE 2 // Rate at which dots fade colors (has to be a multiple of 2)
 #define RESET 500 // Time before the clock resest the dots
-#define DOT_MOVE 200 // The resistence for dot movment
+#define DOT_MOVE 450 // The resistence for dot movment
 #define B_HIGH 250 // Brightness high limit
 #define B_LOW 150 // Brightness low limit
 #define BLANK CRGB(0,0,0) // A blank CRGB object.
@@ -34,7 +34,9 @@
 #define ACCEL_READING_3 Z // X Y Z should be readings 1 2 3 in a perfect world
 #define INVERT_1 -1 // 1 does nothing to the readings
 #define INVERT_2 1 // -1 inverts the readings
-#define INVERT_3 1 
+#define INVERT_3 1 // Sorry if this backfires and is actually way more complicated. 
+#define STARTING_PALLET MAP_BLUEGREENWHT // The pallet the clock starts with. 
+#define STARTING_BCKGRND_INDEX 190 // Where in the background pallet the program opens with
 
 
 DEFINE_GRADIENT_PALETTE(MAP_WHITEBLUE) {
@@ -311,9 +313,9 @@ class ControlBoard{
         Button MinButt;
         PhotoResistorSmoother PR_Reader; 
         const uint16_t HalfSecond = HALF_SECOND;
-  const uint16_t MultiSecond = MULTI_SECOND;
-  int8_t Mode = 0;
-        uint8_t BGIndex = 130;
+        const uint16_t MultiSecond = MULTI_SECOND;
+        int8_t Mode = 0;
+        uint8_t BGIndex = STARTING_BCKGRND_INDEX;
         int8_t PalIndex = 0;
         bool adjustMode = false;
         void modeLimitCheck() {
@@ -708,12 +710,15 @@ class CompleteClock{
           RTC.begin();
           ClockDisplays[0] = &BitClock;
           ClockDisplays[1] = &ByteClock;
-          MasterPal = MAP_ORGRED;
+          MasterPal = STARTING_PALLET;
           ClockDisplay::BitDotPointer = BitDotArr;
           ClockDisplay::PalettePointer = MasterPal;
           ClockDisplays[0]->buildClock();
         }
 
+        // This is it! really the main function of the program.
+        // This goes through in a loop and checks over all the sensors
+        // Takes sensor info and updates all the leds to match. 
         void runClock() {
           readInputs();
           manageController();
@@ -748,7 +753,7 @@ class CompleteClock{
         uint32_t GravityModeTimer = 0;
         uint32_t TimeLimit = RESET;
         
-
+        // Read in the accelerometer readings to then feed to the bit dots. 
         void readInputs() {
           Accelerometer.updateReadings();
           x = Accelerometer.X();
@@ -756,7 +761,8 @@ class CompleteClock{
           z = Accelerometer.Z();
           BitDotArr[0].ALL_DOT_BRIGHTNESS(Controller.getPRReading());
         }
-
+        
+        // Keep tabs on accel readings and ask if the clock is not sitting straight.
         void manageGravityMode() {
           Serial.println(x);
           if (abs(y) > tippingPoint || abs(z) > tippingPoint || x > 0) { // x readings should ALWAYS be negative when the clock is resting, this will never not change and I will never regret putting zero here. 
@@ -771,6 +777,7 @@ class CompleteClock{
           }
         }
 
+        // Use in a loop to keep updating the bitdots with the correct time display.
         void manageDisplayMode() {
           int8_t mode = Controller.getMode();
           DotsInUse = ClockDisplays[mode]->requestNumOfDots();
@@ -781,6 +788,7 @@ class CompleteClock{
           //}
         }
 
+        // Adjust the time in the clock taking in inputs from the adjust buttons on the clock
         void manageTimeAdjust() {
           int8_t tempH = Controller.getHourUpdate();
           int8_t tempM = Controller.getMinUpdate();
@@ -791,6 +799,7 @@ class CompleteClock{
           }
         }
 
+        // Take in readings from the buttons and adjust the time or change the mode. 
         void manageController() {
           switch (Controller.buttonCheck()) {
             case Action::TimeAdjust:
@@ -809,6 +818,7 @@ class CompleteClock{
           }
         }
 
+        // Sets every value in everything possible back to its neutral state.
         void cleanSlate(TProgmemRGBGradientPalettePtr palPoint) {
           BitDotArr[0].CLEAN_ALL_LOCATIONS();
           for(int i = 0; i < BD_NUM; ++i) {
@@ -818,6 +828,7 @@ class CompleteClock{
           ClockDisplay::PalettePointer = MasterPal;
         }
 
+        // is it?
         bool isAClock() {
           for (int i = 0; i < DotsInUse; ++i) {
             if (!BitDotArr[i].isInClockFormation()) {
@@ -827,6 +838,7 @@ class CompleteClock{
           return true;
         }
 
+        // Takes a bunch of bitdots and resets them and their internal locations back to the hard location
         void resetClock() {
           BitDotArr[0].CLEAN_ALL_LOCATIONS();
           for (int i = 0; i < DotsInUse; ++i) {
@@ -834,6 +846,7 @@ class CompleteClock{
           }
         }
 
+        // Lets see those dots!!
         void refreshDots() {
           CRGB temp = ColorFromPalette(BackGroundPal, Controller.getBGIndex(), BG_BRIGHT);
           BitDotArr[0].DISPLAY_BACKGROUND(temp);
