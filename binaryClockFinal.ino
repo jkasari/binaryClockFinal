@@ -12,7 +12,7 @@
 #define MODE_LIM 2 // Limit of display modes.
 #define BACKG_NUM 255 // Number of backgrounds  
 #define ACCEL_PORT 0x69 // Wire address of the accelerometer
-#define TIP_POINT 20000 // At what point the dots ball out of place.
+#define TIP_POINT 200 // At what point the dots ball out of place.
 #define FADE_RATE 2 // Rate at which dots fade colors (has to be a multiple of 2)
 #define RESET 500 // Time before the clock resest the dots
 #define DOT_MOVE 200 // The resistence for dot movment
@@ -758,7 +758,8 @@ class CompleteClock{
         }
 
         void manageGravityMode() {
-          if (pow(y, 2) > tippingPoint || pow(z, 2) > tippingPoint) {
+          Serial.println(x);
+          if (abs(y) > tippingPoint || abs(z) > tippingPoint || x > 0) { // x readings should ALWAYS be negative when the clock is resting, this will never not change and I will never regret putting zero here. 
             GravityMode = true;
             GravityModeTimer = 1;
           } else {
@@ -775,9 +776,9 @@ class CompleteClock{
           DotsInUse = ClockDisplays[mode]->requestNumOfDots();
           ClockDisplays[mode]->updateTime(RTC.now());
           DateTime how = RTC.now();
-          if (how.hour() != 23) {
-            Serial.println(how.hour());
-          }
+          //if (how.hour() != 23) {
+          //  Serial.println(how.hour());
+          //}
         }
 
         void manageTimeAdjust() {
