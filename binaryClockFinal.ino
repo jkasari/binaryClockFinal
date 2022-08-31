@@ -17,7 +17,7 @@
 #define RESET 500 // Time before the clock resest the dots
 #define DOT_MOVE 450 // The resistence for dot movment
 #define B_HIGH 250 // Brightness high limit
-#define B_LOW 150 // Brightness low limit
+#define B_LOW 15 // Brightness low limit
 #define BLANK CRGB(0,0,0) // A blank CRGB object.
 #define SIX_BIT 6 // Literally the number six.
 #define FOUR_BIT 4 // Literally the number 4
