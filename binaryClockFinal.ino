@@ -29,6 +29,12 @@
 #define PAL_NUM 9 // The number of palettes.
 #define HALF_SECOND 300 // A quick press of the button
 #define MULTI_SECOND 1000 // A longer press of the button
+#define ACCEL_READING_1 Y // Each is a reading from the one of the accel directions
+#define ACCEL_READING_2 X // Mix and match the X Y and Z chars around to orient the accel in  different directions. 
+#define ACCEL_READING_3 Z // X Y Z should be readings 1 2 3 in a perfect world
+#define INVERT_1 -1 // 1 does nothing to the readings
+#define INVERT_2 1 // -1 inverts the readings
+#define INVERT_3 1 
 
 
 DEFINE_GRADIENT_PALETTE(MAP_WHITEBLUE) {
@@ -164,22 +170,22 @@ class GY521Reader {
       Wire.endTransmission(false); 
       Wire.requestFrom(Port, 6, true); 
       // "Wire.read()<<8 | Wire.read();" means two registers are read and stored in the same variable
-      XReading = Wire.read()<<8 | Wire.read(); // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
-      YReading = Wire.read()<<8 | Wire.read(); // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
-      ZReading = Wire.read()<<8 | Wire.read(); // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
+      reading1 = Wire.read()<<8 | Wire.read(); // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
+      reading2 = Wire.read()<<8 | Wire.read(); // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
+      reading3 = Wire.read()<<8 | Wire.read(); // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
     }
 
     // Adjust the return types for different accelerometer orintations.
-    int16_t X() { return XReading / adjuster; }
-    int16_t Y() { return YReading / adjuster; }
-    int16_t Z() { return ZReading / adjuster; }
+    int16_t ACCEL_READING_1() { return reading1 / adjuster * INVERT_1; }
+    int16_t ACCEL_READING_2() { return reading2 / adjuster * INVERT_2; }
+    int16_t ACCEL_READING_3() { return reading3 / adjuster * INVERT_3; }
 
   private:
     uint8_t Port = ACCEL_PORT;
     const int16_t adjuster = 60; 
-    int16_t XReading;
-    int16_t YReading;
-    int16_t ZReading;
+    int16_t reading1;
+    int16_t reading2;
+    int16_t reading3;
 };
 
  /**
